@@ -1,0 +1,22 @@
+# Trim the Docker build context. The repo's own .gitignore
+# already excludes most of these; this is defense in depth so a
+# future contributor's uncommitted file doesn't accidentally
+# bake secrets into the image.
+node_modules/
+.output/
+.vite/
+dist/
+.tanstack/
+*.log
+coverage/
+.env
+.env.local
+.env.*.local
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+*.md
+!README.md
+!SECURITY.md

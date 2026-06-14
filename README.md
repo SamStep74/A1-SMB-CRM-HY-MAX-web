@@ -85,6 +85,10 @@ scripts/
 └── start.mjs                       # Node http listener + /v1/* prod proxy
 ```
 
+The CI workflow at `.github/workflows/ci.yml` and a
+`.dockerignore` (to trim the build context) are at the repo
+root.
+
 ## Sync with backend
 
 The frontend's `src/lib/api/integrations.ts` Zod schemas mirror the backend's `docs/api-contracts.md` and the admin-bootstrap envelope documented in `docs/integrations-admin-ui.md`. If the backend adds a new field to the envelope, the frontend's Zod parse will fail with `SCHEMA_DRIFT` on the next call — that's the canary.
@@ -93,18 +97,15 @@ The drift guard is the design: rather than silently rendering with missing data,
 
 ## CI
 
-GitHub Actions is **not yet** wired in. The CI workflow file
-(`.github/workflows/ci.yml`) is checked in to the working tree
-locally but is currently gitignored (line 16 of `.gitignore`)
-because the GitHub token used to seed the repo lacked the
-`workflow` scope. Once the token is rotated with `workflow`
-included, run:
+GitHub Actions runs on every push to `main` and on every PR.
+The workflow at `.github/workflows/ci.yml` has two jobs:
 
-```sh
-git add -f .github/workflows/ci.yml
-git commit -m "ci: add GitHub Actions workflow"
-git push
-```
+- `lint-typecheck-test` — `npm ci --legacy-peer-deps`, `npm run
+  typecheck`, `npm test`. Cancels in-flight runs of the same
+  ref via `concurrency` group.
+- `build-image` — `docker build` against the commit SHA. Runs
+  after `lint-typecheck-test` succeeds.
 
-The workflow runs lint, typecheck, vitest, and a docker build on
-every PR.
+`.npmrc` carries `legacy-peer-deps=true`; the workflow also
+passes the flag explicitly so a future contributor removing
+`.npmrc` does not break the build.
