@@ -84,3 +84,15 @@ src/
 The frontend's `src/lib/api/integrations.ts` Zod schemas mirror the backend's `docs/api-contracts.md` and the admin-bootstrap envelope documented in `docs/integrations-admin-ui.md`. If the backend adds a new field to the envelope, the frontend's Zod parse will fail with `SCHEMA_DRIFT` on the next call — that's the canary.
 
 The drift guard is the design: rather than silently rendering with missing data, the UI loudly refuses to render and asks the operator to update the schema.
+
+## CI
+
+A workflow is checked into `.github/workflows/ci.yml` (lint, typecheck, vitest, docker build). It's NOT in the initial push because the GitHub token used to seed the repo didn't have the `workflow` scope. Add the file manually once the token is rotated with the right scopes:
+
+```sh
+mkdir -p .github/workflows
+# (file is in this repo at .github/workflows/ci.yml)
+git add .github/workflows/ci.yml
+git commit -m "ci: add GitHub Actions workflow"
+git push
+```
