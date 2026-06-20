@@ -1,0 +1,44 @@
+{
+  "id": "integrations-admin-bootstrap-contract",
+  "productName": "A1 SMB CRM MAX Web integrations admin bootstrap contract",
+  "runTag": "2026-06-20-integrations-admin-bootstrap-contract",
+  "branchPrefix": "karpathy/",
+  "editableFiles": [
+    "src/lib/api/integrations.ts"
+  ],
+  "readOnlyFiles": [
+    "scripts/check-integrations-admin-bootstrap-contract.mjs",
+    "src/lib/api/integrations.test.ts"
+  ],
+  "contextFiles": [
+    "README.md",
+    "package.json",
+    "src/lib/api/integrations.ts",
+    "src/lib/api/integrations.test.ts",
+    "src/routes/integrations.tsx",
+    "src/components/integrations/IntegrationsTable.tsx",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "guardrails": [
+    "Keep the admin bootstrap fetch pointed at GET /v1/integrations/_admin-bootstrap.",
+    "Keep Authorization: Bearer sourced from the a1sid token only when a token is available; do not crash when localStorage is unavailable.",
+    "Keep structured ApiError handling for backend envelopes and keep SCHEMA_DRIFT messages pointing to the first Zod issue path.",
+    "Keep the AdminBootstrap Zod schema aligned to integrations, outbound statuses, trigger configs, vault audit, OAuth connect actions, and metadata.",
+    "Do not expose GitHub tokens, Gemini keys, authorization headers, bearer tokens, cookies, or API keys in eval output."
+  ],
+  "eval": {
+    "command": "node",
+    "args": [
+      "scripts/check-integrations-admin-bootstrap-contract.mjs"
+    ],
+    "metric": {
+      "name": "failing_checks",
+      "direction": "minimize"
+    },
+    "successMetricValue": 0,
+    "failureMetricValue": 1,
+    "timeBudgetMinutes": 3,
+    "timeoutMinutes": 10
+  }
+}

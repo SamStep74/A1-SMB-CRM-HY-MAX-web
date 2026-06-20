@@ -1,3 +1,4 @@
+node_modules
 node_modules/
 .output/
 .vite/
@@ -5,6 +6,7 @@ dist/
 .tanstack/
 *.log
 coverage/
+evals/karpathy/results/
 .env
 .env.local
 .env.*.local
