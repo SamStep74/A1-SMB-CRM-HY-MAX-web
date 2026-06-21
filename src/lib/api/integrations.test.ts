@@ -14,7 +14,7 @@
  * field, the parse fails loudly here, not silently in render.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { fetchAdminBootstrap, setToken, clearToken } from "./integrations";
+import { fetchAdminBootstrap, setToken, clearToken, getToken } from "./integrations";
 
 // Sample provider ids use neutral names (`acme-email`, etc.) — the
 // repo's licensing cleanup removed all third-party vendor names
@@ -61,6 +61,24 @@ const validEnvelope = {
   },
 };
 
+function makeMemoryStorage(): Storage {
+  const entries = new Map<string, string>();
+  return {
+    get length() {
+      return entries.size;
+    },
+    clear: () => entries.clear(),
+    getItem: (key: string) => entries.get(key) ?? null,
+    key: (index: number) => Array.from(entries.keys())[index] ?? null,
+    removeItem: (key: string) => {
+      entries.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      entries.set(key, value);
+    },
+  };
+}
+
 describe("fetchAdminBootstrap", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -93,6 +111,125 @@ describe("fetchAdminBootstrap", () => {
     const init = fetchMock.mock.calls[0][1] as RequestInit;
     const headers = init.headers as Record<string, string>;
     expect(headers.authorization).toBe("Bearer sid_test_123");
+  });
+
+  it("falls back to in-memory token storage when browser localStorage is unavailable", async () => {
+    const originalStorage = window.localStorage;
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      setToken("sid_memory_123");
+      expect(getToken()).toBe("sid_memory_123");
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify(validEnvelope), { status: 200 }),
+      );
+      await fetchAdminBootstrap();
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      const headers = init.headers as Record<string, string>;
+      expect(headers.authorization).toBe("Bearer sid_memory_123");
+      clearToken();
+      expect(getToken()).toBeNull();
+    } finally {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: originalStorage,
+      });
+    }
+  });
+
+  it("keeps fallback token synchronized when browser storage availability changes", async () => {
+    const originalStorage = window.localStorage;
+    const recoveredStorage = makeMemoryStorage();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      setToken("sid_memory_old");
+      expect(getToken()).toBe("sid_memory_old");
+    } finally {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: originalStorage,
+      });
+    }
+
+    setToken("sid_storage_current");
+    expect(getToken()).toBe("sid_storage_current");
+
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: recoveredStorage,
+    });
+    setToken("sid_storage_current");
+    expect(recoveredStorage.getItem("a1sid")).toBe("sid_storage_current");
+
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      expect(getToken()).toBe("sid_storage_current");
+      clearToken();
+      expect(getToken()).toBeNull();
+    } finally {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: originalStorage,
+      });
+    }
+  });
+
+  it("clears recovered browser storage after logout while storage is unavailable", async () => {
+    const originalStorage = window.localStorage;
+    const recoveredStorage = makeMemoryStorage();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: recoveredStorage,
+    });
+    setToken("sid_persisted_before_clear");
+    expect(recoveredStorage.getItem("a1sid")).toBe("sid_persisted_before_clear");
+
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: undefined,
+    });
+    clearToken();
+    expect(getToken()).toBeNull();
+
+    try {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: recoveredStorage,
+      });
+      expect(getToken()).toBeNull();
+      expect(recoveredStorage.getItem("a1sid")).toBeNull();
+    } finally {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        value: originalStorage,
+      });
+    }
+  });
+
+  it("does not persist tokens when no browser window is available", async () => {
+    const originalWindow = globalThis.window;
+    vi.stubGlobal("window", undefined);
+    try {
+      setToken("sid_server_123");
+      expect(getToken()).toBeNull();
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify(validEnvelope), { status: 200 }),
+      );
+      await fetchAdminBootstrap();
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      const headers = init.headers as Record<string, string>;
+      expect(headers.authorization).toBeUndefined();
+    } finally {
+      vi.stubGlobal("window", originalWindow);
+    }
   });
 
   it("throws an ApiError on a 5xx with the structured envelope", async () => {

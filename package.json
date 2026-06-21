@@ -11,6 +11,9 @@
     "start": "node scripts/start.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "karpathy:list": "node scripts/karpathy-eval.mjs --list",
+    "karpathy:program": "node scripts/karpathy-eval.mjs --program",
+    "karpathy:run": "node scripts/karpathy-eval.mjs --run",
     "lint": "eslint .",
     "docker:build": "docker build -t a1-smb-crm-hy-max-web:latest .",
     "docker:run": "docker run -d --name a1-smb-crm-hy-max-web -p 4173:4173 --restart unless-stopped a1-smb-crm-hy-max-web:latest"

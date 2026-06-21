@@ -14,21 +14,58 @@
 import { z } from "zod";
 
 const TOKEN_KEY = "a1sid";
+let memoryToken: string | null = null;
+let pendingStorageValue: string | null | undefined;
+
+function getBrowserStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const storage = window.localStorage;
+    if (!storage) return null;
+    const probeKey = `${TOKEN_KEY}:probe`;
+    storage.setItem(probeKey, "1");
+    storage.removeItem(probeKey);
+    return storage;
+  } catch {
+    return null;
+  }
+}
 
 /** Read the current session id. `null` if not signed in. */
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  const storage = getBrowserStorage();
+  if (!storage) return memoryToken;
+  if (pendingStorageValue === null) {
+    storage.removeItem(TOKEN_KEY);
+    pendingStorageValue = undefined;
+  } else if (typeof pendingStorageValue === "string") {
+    storage.setItem(TOKEN_KEY, pendingStorageValue);
+    pendingStorageValue = undefined;
+  }
+  return storage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token: string): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(TOKEN_KEY, token);
+  memoryToken = token;
+  pendingStorageValue = token;
+  const storage = getBrowserStorage();
+  if (storage) {
+    storage.setItem(TOKEN_KEY, token);
+    pendingStorageValue = undefined;
+  }
 }
 
 export function clearToken(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(TOKEN_KEY);
+  memoryToken = null;
+  pendingStorageValue = null;
+  const storage = getBrowserStorage();
+  if (storage) {
+    storage.removeItem(TOKEN_KEY);
+    pendingStorageValue = undefined;
+  }
 }
 
 // -- response schemas (Zod) --
@@ -111,10 +148,11 @@ const ErrorEnvelope = z.object({
  * Fetch the admin-bootstrap envelope. Throws on non-2xx.
  */
 export async function fetchAdminBootstrap(): Promise<AdminBootstrap> {
+  const token = getToken();
   const res = await fetch("/v1/integrations/_admin-bootstrap", {
     method: "GET",
     headers: {
-      ...(getToken() ? { authorization: `Bearer ${getToken()}` } : {}),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
       accept: "application/json",
     },
   });

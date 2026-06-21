@@ -109,3 +109,17 @@ The workflow at `.github/workflows/ci.yml` has two jobs:
 `.npmrc` carries `legacy-peer-deps=true`; the workflow also
 passes the flag explicitly so a future contributor removing
 `.npmrc` does not break the build.
+
+## Karpathy Eval
+
+The integrations admin bootstrap lane keeps the editable surface narrow and
+records scalar results through the shared `@a1/ai` runner:
+
+```sh
+npm run karpathy:list
+npm run karpathy:program -- integrations-admin-bootstrap-contract
+npm run karpathy:run -- integrations-admin-bootstrap-contract
+```
+
+Use `--allow-harness-dirty` only while bootstrapping reviewed local harness files
+before committing them.
