@@ -110,16 +110,25 @@ The workflow at `.github/workflows/ci.yml` has two jobs:
 passes the flag explicitly so a future contributor removing
 `.npmrc` does not break the build.
 
-## Karpathy Eval
+## Karpathy Eval Harness
 
-The integrations admin bootstrap lane keeps the editable surface narrow and
-records scalar results through the shared `@a1/ai` runner:
+This repo exposes a narrow product-research contract for the integrations admin
+bootstrap API client:
 
-```sh
+```bash
 npm run karpathy:list
 npm run karpathy:program -- integrations-admin-bootstrap-contract
-npm run karpathy:run -- integrations-admin-bootstrap-contract
+npm run karpathy:run -- integrations-admin-bootstrap-contract --best 0
+node scripts/check-integrations-admin-bootstrap-contract.mjs
 ```
 
-Use `--allow-harness-dirty` only while bootstrapping reviewed local harness files
-before committing them.
+The `integrations-admin-bootstrap-contract` eval uses `failing_checks` as a
+minimize metric and keeps the editable surface limited to `src/lib/api/integrations.ts`.
+It protects the `/v1/integrations/_admin-bootstrap` fetch path, token fallback
+behavior, structured `ApiError` handling, Zod schema drift detection, and
+secret-free eval output with focused read-only Vitest coverage.
+
+The harness uses `@a1/ai` when installed, or a nearby `A1-AI-Core` checkout when
+present. In a clean clone it bootstraps the pinned public A1-AI-Core runner into
+the user cache; set `A1_AI_CORE_PATH` or `A1_AI_CORE_CACHE_DIR` to override that
+location for CI.
